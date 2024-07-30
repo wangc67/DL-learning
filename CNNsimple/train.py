@@ -7,6 +7,7 @@ from data_loader import GetDataLoader, GetCIFAR100
 import matplotlib.pyplot as plt
 import torch.nn.functional as F
 import pickle
+import os
 
 device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 
@@ -40,7 +41,7 @@ def train(args):
 
     if args.pretrained_weights is not None:
         print('train second time')
-        model.load_state_dict(torch.load(args.pretrained_weights))
+        model.load_state_dict(torch.load(args.weights_dir+args.pretrained_weights))
         # for name, param in model.named_parameters():
         #     if 'classifier' not in name:
         #         param.requires_grad_ = False
@@ -52,6 +53,13 @@ def train(args):
     optimizer = args.optimizer(model.parameters(), **args.kwargs_o)
     if args.scheduler is not None:
         scheduler = args.scheduler(optimizer, **args.kwargs_s)
+    args.weights = args.weights_dir + args.weights
+    args.best_weight_dict = args.weights_dir + args.best_weight_dict
+    args.best_weight = args.weights_dir + args.best_weight
+    args.weights_dict = args.weights_dir + args.weights_dict
+    print(args.weights,args.best_weight_dict)
+    if not os.path.exists(args.weights_dir):
+        os.mkdir(args.weights_dir)        
 
     for epoch in range(args.epochs):
         t0 = time.time()
@@ -182,10 +190,11 @@ def args_plant():
     ap.add_argument('--kwargs_s', default={'T_max': 50, 'eta_min': 1e-5})
 
     ap.add_argument('--pretrained_weights', type=str, default=None)
-    ap.add_argument('--weights', type=str, default='../weights/plant.pt')
-    ap.add_argument('--weights_dict', type=str, default='../weights/plant_dict.pt')
-    ap.add_argument('--best_weight', type=str, default='../weights/plant_best.pt')
-    ap.add_argument('--best_weight_dict', type=str, default='../weights/plant_dict_best.pt')
+    ap.add_argument('--weights_dir',type=str,default='../weights/')
+    ap.add_argument('--weights', type=str, default='plant.pt')
+    ap.add_argument('--weights_dict', type=str, default='plant_dict.pt')
+    ap.add_argument('--best_weight', type=str, default='plant_best.pt')
+    ap.add_argument('--best_weight_dict', type=str, default='plant_dict_best.pt')
 
     ap.add_argument('--save_results', type=bool, default=True)
     return ap.parse_args()
