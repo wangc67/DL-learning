@@ -24,8 +24,8 @@ class dataset():
         self.flip = flip
         self.clip = clip
 
-        self.xx = 200
-        self.yy = 200 # pic size not same, clip to 
+        self.xx = 112
+        self.yy = 112 # pic size not same, clip to 
 
     def __getitem__(self, index):
         return self.process(self.data_path[index])
@@ -39,10 +39,10 @@ class dataset():
             flag = 1
         elif 'test' in self.path:
             flag = 0
-            with open('data\\10_plants_dataset\\test_labels.json') as ff:
+            with open('../data\\10_plants_dataset\\test_labels.json') as ff:
                 self.test_label = json.load(ff)
         
-        with open('data\\10_plants_dataset\\label_idx.json') as f:
+        with open('../data\\10_plants_dataset\\label_idx.json') as f:
             self.label_idx = json.load(f)
         
         self.data_path = []
@@ -73,8 +73,10 @@ class dataset():
             x0 = np.random.randint(0, X - self.xx)
             y0 = np.random.randint(0, Y - self.yy)
             img = img.crop((x0, y0, x0 + self.xx, y0 + self.yy))
+            img = img.resize((224, 224))
         else:         # ^^^^^^^^^^^^^
             img = img.resize((self.xx, self.yy))
+            img = img.resize((224, 224))
         if self.flip:
             lr, tb = np.random.randint(0, 2), np.random.randint(0, 2)
             if lr == 1:
@@ -95,9 +97,9 @@ def GetDataLoader(batch_size: int, mode='train'):
     mode == 'train': return train, val;
     else return test
     '''
-    TrainDataset = dataset(path + '/train', rotate=True, flip=True, clip=False)
-    ValDataset = dataset(path + '/val')
-    TestDataset = dataset(path + '/test')
+    TrainDataset = dataset(path + '/train', rotate=True, flip=True, clip=True)
+    ValDataset = dataset(path + '/val', clip=False)
+    TestDataset = dataset(path + '/test', clip=False)
     if mode == 'train':
         TrainLoader = DataLoader(TrainDataset, batch_size, shuffle=True, pin_memory=True)
         ValLoader = DataLoader(ValDataset, batch_size, shuffle=False, pin_memory=True)

@@ -103,7 +103,7 @@ def train(args):
         torch.save(model, args.best_weight)
         torch.save(model.state_dict(), args.best_weight_dict)
         best_val_acc = Acc
-    print(f'Total Loss {Loss:.6f}\tTotal Acc{Acc:.6f}\nBest Acc{best_val_acc:.6f}')
+    print(f'Total Loss {Loss:.6f}\tTotal Acc {Acc:.6f}\nBest Acc {best_val_acc:.6f}')
     if args.save_results: # 1e9 sec > 3 year, put last 8 digit of time as hash
         sslst = str(time.time()).split('.') 
         with open(f'{sslst[0][-8:]}_results.lst', 'wb') as file:
@@ -126,7 +126,7 @@ def show_loss_acc(results, args, file=None, save=False):
     plt.plot(epochs_cnt, avg_val_loss, 'green', label="AvgValLoss", linewidth='2')
     plt.ylabel("Loss")
     plt.xlabel('Epochs')
-    plt.ylim((0, 20)) # 
+    # plt.ylim() # 
     plt.legend(fontsize=12)
     plt.subplot(1, 2, 2)
     plt.plot(epochs_cnt, avg_train_acc, 'red', label="AvgTrainAcc", linewidth='2')
@@ -165,7 +165,33 @@ def args_cnn():
     return ap.parse_args()
 
 
+def args_plant():
+    ap = argparse.ArgumentParser()
+    epochs, batch_size, lr, = 50, 64, 0.03
+    ap.add_argument('--epochs', type=int, default=50) # far from convergence
+    ap.add_argument('--batch_size', type=int, default=64)
+    # ap.add_argument('--validation_ratio', type=float, default=0.1)
+
+    ap.add_argument('--net', default=models.resnet18)
+    ap.add_argument('--get_data_function', default=GetDataLoader)
+
+    ap.add_argument('--loss_function', default=nn.CrossEntropyLoss) # what's the difference with F.cross_entropy ?
+    ap.add_argument('--optimizer', default=torch.optim.Adam)
+    ap.add_argument('--kwargs_o', default={'lr': lr, 'weight_decay': 1e-5})
+    ap.add_argument('--scheduler', default=torch.optim.lr_scheduler.CosineAnnealingLR)
+    ap.add_argument('--kwargs_s', default={'T_max': 50, 'eta_min': 1e-5})
+
+    ap.add_argument('--pretrained_weights', type=str, default=None)
+    ap.add_argument('--weights', type=str, default='../weights/plant.pt')
+    ap.add_argument('--weights_dict', type=str, default='../weights/plant_dict.pt')
+    ap.add_argument('--best_weight', type=str, default='../weights/plant_best.pt')
+    ap.add_argument('--best_weight_dict', type=str, default='../weights/plant_dict_best.pt')
+
+    ap.add_argument('--save_results', type=bool, default=True)
+    return ap.parse_args()
+
+
 if __name__ == '__main__':
-    Args = args_cnn()
+    Args = args_plant()
     results = train(Args)
     show_loss_acc(results, Args)

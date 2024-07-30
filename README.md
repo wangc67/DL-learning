@@ -7,7 +7,5 @@ to run a demo cnn,
 cd CNNsimple
 python ./train.py
 
-to use custom dataset, unzip and put it in ./data
-
-ps: evaluate.py undone, and the cnn is no use on custom dataset
+to use custom dataset, unzip and put it in ../data
 

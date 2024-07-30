@@ -36,11 +36,11 @@ def test(args):
 if __name__ == '__main__':
     ap = argparse.ArgumentParser()
     ap.add_argument('--mode', type=str, default='gpu', help='cpu or gpu')
-    ap.add_argument('--get_data_function', default=GetCIFAR100)
+    ap.add_argument('--get_data_function', default=GetDataLoader)
     ap.add_argument('--batch_size', type=int, default=64)
-    ap.add_argument('--net', default=models.cnn_cifar)
-    ap.add_argument('--weight', type=str, default=None)
-    ap.add_argument('--weight_dict', type=str, default='../weights/cnn_dict.pt')
+    ap.add_argument('--net', default=models.resnet18)
+    ap.add_argument('--weight', type=str, default='../weights/plant_best.pt')
+    ap.add_argument('--weight_dict', type=str, default=None)
     args = ap.parse_args()
 
     acc = test(args)
