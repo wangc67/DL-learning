@@ -2,92 +2,46 @@ import os
 from numpy import asarray, sqrt
 import torch
 import models
+from data_loader import GetCIFAR100, GetDataLoader
 from PIL.Image import open as Open
 import argparse
-'''
-undone
-'''
-model = Net()
-model.load_state_dict(torch.load('./weights/cnn_n_70ep_49.pkl', map_location=torch.device('cpu')))
-
-
-def move_device(tensor, device):
-    if isinstance(tensor, (list, tuple)):
-        return [move_device(element, device) for element in tensor]
-    return tensor.to(device, non_blocking=True)
-
-
-class DeviceDataLoader:
-    def __init__(self, dataloader, device='cpu'):
-        self.dl = dataloader
-        self.device = device
-
-    def __iter__(self):
-        for i in self.dl:
-            yield move_device(i, self.device)
-
-    def __len__(self):
-        return len(self.dl)
-
-
-def load_test_data():
-    test_loader = torch.utils.data.DataLoader(test_data, batch_size=100, shuffle=False, pin_memory=True)
-    test_dl = DeviceDataLoader(test_loader)
-    return test_dl
 
 def accuracy(predicted, labels):
-    pred, predclassid = torch.max(predicted, dim=1)
-    return torch.tensor(torch.sum(predclassid == labels).item() / len(predicted))
+    _, predict_id = torch.max(predicted, dim=1)
+    return torch.tensor([torch.sum(predict_id == labels).item(), len(predict_id)])
 
-
-def evaluate(model, valid_dl, loss_func):
+def evaluate(model, valid_dl, device):
+    prediction = torch.tensor([0, 0], dtype=int) # [correct, all]
     model.eval()
-    loss_per_batch, accuracy_per_batch = [], []
-    for images, labels in valid_dl:
-        with torch.no_grad():
-            predicted = model(images)
-        loss_per_batch.append(loss_func(predicted, labels))
-        accuracy_per_batch.append(accuracy(predicted, labels))
-    val_loss_epoch = torch.stack(loss_per_batch).mean().item()
-    val_accuracy_epoch = torch.stack(accuracy_per_batch).mean().item()
-    return val_loss_epoch, val_accuracy_epoch
+    model.to(device)
+    with torch.no_grad():
+        for X, Y in valid_dl:
+            X, Y = X.to(device), Y.to(device)
+            Yhat = model(X)
+            prediction += accuracy(Yhat, Y) # 
+    return prediction[0] / prediction[1]
 
-
-def show_prediction():
-    file, img = [], []
-    directory = './image_show'
-    bijection = {}
-    with open('./image_show/son/fine_label_names.txt', mode='r') as f:
-        for line in f.readlines():
-            [idx, name] = line.split(' ')
-            bijection[idx] = name
-    for item in os.walk(directory, topdown=True):
-        for it in item:
-            if type(it) == list:
-                file.extend(it)
-            elif type(it) == str:
-                file.append(it)
-    for f in file:
-        if f.find('.png') != -1:
-            img.append(os.path.join(directory, f))
-
-    for image in img:
-        X = torch.tensor(asarray(Open(image))).float()
-        X = X.permute(2, 0, 1)
-        X = X.reshape(-1, 3, 32, 32)
-        prediction = model(X).flatten()
-        id_ = int(prediction.argmax())
-        print(f'{image}\t{bijection[f"{id_}"]}')
+def test(args):
+    device = 'cuda:0' if (torch.cuda.is_available() and args.mode == 'gpu') else 'cpu'
+    if args.weight is not None:
+        model = torch.load(args.weight)
+    else:
+        model = args.net()
+        model.load_state_dict(torch.load(args.weight_dict))
+    TestLoader = args.get_data_function(args.batch_size, mode='test')
+    Acc = evaluate(model, TestLoader, device)
+    return Acc
 
 
 if __name__ == '__main__':
     ap = argparse.ArgumentParser()
-    ap.add_argument('mode', type=str, help='evaluate or predict')
-    args = vars(ap.parse_args())
-    if args["mode"] == 'evaluate':
-        from data_loader import test_data
-        test_dl = load_test_data()
-        _, best_acc = evaluate(model, test_dl, torch.nn.functional.cross_entropy)
-        print(f'Acc {best_acc:.6f}')
-    else:
-        show_prediction()
+    ap.add_argument('--mode', type=str, default='gpu', help='cpu or gpu')
+    ap.add_argument('--get_data_function', default=GetCIFAR100)
+    ap.add_argument('--batch_size', type=int, default=64)
+    ap.add_argument('--net', default=models.cnn_cifar)
+    ap.add_argument('--weight', type=str, default=None)
+    ap.add_argument('--weight_dict', type=str, default='../weights/cnn_dict.pt')
+    args = ap.parse_args()
+
+    acc = test(args)
+    print(f'test acc {acc:.3f}')
